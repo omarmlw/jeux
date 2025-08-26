@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة طفل</title>
+    <!-- تضمين مكتبة Tone.js لإضافة الأصوات -->
+    <script src="https://cdn.jsdelivr.net/npm/tone@14.7.58/build/Tone.js"></script>
+    <style>
+        /* الأنماط العامة للصفحة */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0; /* لون خلفية افتراضي */
+            transition: background-color 0.5s ease; /* تأثير انتقال ناعم لتغيير اللون */
+            user-select: none; /* منع تحديد النص */
+        }
+        /* حاوية اللعبة الرئيسية */
+        .game-container {
+            text-align: center;
+            padding: 20px;
+            max-width: 90%;
+        }
+        /* عنوان اللعبة */
+        h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        /* تعليمات اللعبة */
+        .instructions {
+            font-size: 1.2rem;
+            color: #555;
+            margin-bottom: 30px;
+        }
+        /* حاوية الأزرار */
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        /* أنماط الأزرار */
+        .color-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%; /* شكل دائري */
+            border: 8px solid white;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            font-size: 3rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        /* تأثير عند النقر أو لمس الزر */
+        .color-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        /* أنماط خاصة لكل لون زر */
+        .red { background-color: #ff6b6b; }
+        .yellow { background-color: #ffe66b; }
+        .green { background-color: #6bff6b; }
+        .blue { background-color: #6b6bff; }
+        .purple { background-color: #a46bff; }
+        .orange { background-color: #ff9966; }
+
+        /* زر البدء الأولي */
+        .start-button {
+            padding: 15px 30px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+        .start-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <!-- عنوان اللعبة -->
+        <h1 id="title">لعبة الألوان والأصوات!</h1>
+
+        <!-- التعليمات -->
+        <p class="instructions" id="instructions">اضغط على الأزرار الملونة لترى ماذا سيحدث!</p>
+
+        <!-- زر البدء الأولي لإزالة حجب الصوت في المتصفحات -->
+        <button id="start-button" class="start-button">ابدأ اللعب</button>
+
+        <!-- حاوية الأزرار الملونة، مخفية في البداية -->
+        <div class="button-container" id="button-container" style="display: none;">
+            <div class="color-button red" data-color="#ff6b6b" data-index="0">🔴</div>
+            <div class="color-button yellow" data-color="#ffe66b" data-index="1">🟡</div>
+            <div class="color-button green" data-color="#6bff6b" data-index="2">🟢</div>
+            <div class="color-button blue" data-color="#6b6bff" data-index="3">🔵</div>
+            <div class="color-button purple" data-color="#a46bff" data-index="4">🟣</div>
+            <div class="color-button orange" data-color="#ff9966" data-index="5">🟠</div>
+        </div>
+    </div>
+
+    <script>
+        // المتغيرات
+        let isStarted = false;
+        const startButton = document.getElementById('start-button');
+        const buttonContainer = document.getElementById('button-container');
+        const body = document.body;
+        
+        // إنشاء مركب (synthesizer) بسيط من Tone.js
+        const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+
+        // أصوات لتشغيلها عند النقر (درجات موسيقية من سلم دو الكبير)
+        const notes = ["C4", "E4", "G4", "A4", "C5", "E5"];
+
+        // وظيفة تشغيل الصوت
+        const playSound = (noteIndex) => {
+            // تشغيل النغمة الموسيقية المحددة
+            synth.triggerAttackRelease(notes[noteIndex], "8n");
+        };
+
+        // وظيفة تغيير لون الخلفية
+        const changeBackgroundColor = (color) => {
+            body.style.backgroundColor = color;
+        };
+
+        // وظيفة معالجة النقر على الأزرار
+        const handleButtonPress = (event) => {
+            // منع أي سلوك افتراضي
+            event.preventDefault();
+            
+            // جلب الزر الذي تم النقر عليه
+            const button = event.currentTarget;
+            
+            // جلب لون الخلفية من خاصية data-color
+            const newColor = button.getAttribute('data-color');
+            
+            // تغيير لون الخلفية
+            changeBackgroundColor(newColor);
+            
+            // تشغيل الصوت بناءً على فهرس الزر، باستخدام السمة data-index
+            const buttonIndex = button.getAttribute('data-index');
+            playSound(buttonIndex);
+        };
+
+        // إضافة مستمعي الأحداث للأزرار
+        const buttons = document.querySelectorAll('.color-button');
+        buttons.forEach(button => {
+            // استخدام "pointerdown" للتوافق مع كل من الماوس واللمس
+            button.addEventListener('pointerdown', handleButtonPress);
+        });
+
+        // وظيفة بدء اللعبة
+        const startGame = async () => {
+            if (isStarted) return;
+            isStarted = true;
+
+            // بدء سياق الصوت (مطلوب في بعض المتصفحات)
+            await Tone.start();
+            
+            // إخفاء زر البدء وإظهار الأزرار الملونة
+            startButton.style.display = 'none';
+            buttonContainer.style.display = 'flex';
+            
+            // تحديث التعليمات
+            document.getElementById('instructions').textContent = 'أزرار ممتعة للضغط عليها!';
+        };
+
+        // إضافة مستمعي الأحداث لزر البدء
+        startButton.addEventListener('click', startGame);
+        startButton.addEventListener('touchstart', startGame);
+    </script>
+
+</body>
+</html>
